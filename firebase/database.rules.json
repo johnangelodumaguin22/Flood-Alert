@@ -1,0 +1,51 @@
+{
+  "rules": {
+    "stations": {
+      "$sid": {
+        ".read": "auth != null",
+        "info": { ".write": false },
+        "device_uid": { ".write": false },
+        "latest": {
+          ".write": "auth != null && auth.uid === root.child('stations').child($sid).child('device_uid').val()",
+          ".validate": "newData.hasChildren(['level_cm', 'distance_cm', 'status', 'buzzer_on', 'ts'])",
+          "level_cm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1000" },
+          "distance_cm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1000" },
+          "status": { ".validate": "newData.val() === 'normal' || newData.val() === 'warning' || newData.val() === 'critical'" },
+          "buzzer_on": { ".validate": "newData.isBoolean()" },
+          "ts": { ".validate": "newData.val() === now" },
+          "$other": { ".validate": false }
+        },
+        "history": {
+          ".indexOn": ["ts"],
+          "$id": {
+            ".write": "auth != null && auth.uid === root.child('stations').child($sid).child('device_uid').val() && !data.exists()",
+            ".validate": "newData.hasChildren(['level_cm', 'ts'])",
+            "level_cm": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 1000" },
+            "ts": { ".validate": "newData.val() === now" },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['full_name', 'username', 'email'])",
+        "full_name": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 100" },
+        "username": { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_]{4,20}$/)" },
+        "email": { ".validate": "newData.val() === auth.token.email" },
+        "phone": { ".validate": "newData.isString() && newData.val().matches(/^09[0-9]{9}$/)" },
+        "created_at": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "usernames": {
+      "$name": {
+        ".read": true,
+        ".write": "auth != null && !data.exists() && newData.val() === auth.token.email",
+        ".validate": "$name.matches(/^[a-z0-9_]{4,20}$/)"
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Firmware secrets (Wi-Fi and station passwords); see config.example.h
+firmware/**/config.h
+
+# Firebase CLI cache and logs
+.firebase/
+*-debug.log
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+{
+  "info": {
+    "name": "Station 4B, River Delta",
+    "warn_cm": 65,
+    "crit_cm": 85,
+    "max_cm": 100
+  },
+  "device_uid": "PASTE_THE_STATION_DEVICE_USER_UID_HERE"
+}

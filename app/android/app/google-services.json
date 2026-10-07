@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "706280282211",
+    "firebase_url": "https://flood-alert-csucc-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "flood-alert-csucc",
+    "storage_bucket": "flood-alert-csucc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706280282211:android:515c17906efc6d34adc056",
+        "android_client_info": {
+          "package_name": "ph.edu.floodalert.flood_alert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUaiIjOxMdCdd46CN9ehOshHVCoEIizbY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
