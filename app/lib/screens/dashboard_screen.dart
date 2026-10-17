@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../theme.dart';
 import '../widgets/gauge.dart';
+import 'levels_sheet.dart';
 import 'login_screen.dart';
 
 enum LevelState { normal, warning, critical, offline, noData }
@@ -57,6 +58,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   DashboardData? _data;
   String? _error;
+  bool _admin = false;
   StreamSubscription<DashboardData>? _sub;
 
   @override
@@ -69,6 +71,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }),
       onError: (Object e) => setState(() => _error = '$e'),
     );
+    Api.instance.isAdmin().then((a) {
+      if (mounted) setState(() => _admin = a);
+    });
+  }
+
+  Future<void> _editLevels(DashboardData d) async {
+    final saved = await showLevelsSheet(context, warnCm: d.warnCm, critCm: d.critCm, maxCm: d.maxCm);
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Alert levels saved. The station will use them within a minute.')));
+    }
   }
 
   @override
@@ -134,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(height: 16),
                               _DeviceCard(data: d, state: state),
                               const SizedBox(height: 16),
-                              _LevelsCard(data: d),
+                              _LevelsCard(data: d, onEdit: _admin ? () => _editLevels(d) : null),
                               const SizedBox(height: 8),
                               TextButton(onPressed: _signOut, child: const Text('Sign out')),
                             ],
@@ -555,8 +569,9 @@ class _DeviceCard extends StatelessWidget {
 }
 
 class _LevelsCard extends StatelessWidget {
-  const _LevelsCard({required this.data});
+  const _LevelsCard({required this.data, this.onEdit});
   final DashboardData data;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -582,6 +597,17 @@ class _LevelsCard extends StatelessWidget {
           row(AppColors.safe, 'Below $w cm: normal'),
           row(AppColors.warnFill, '$w to below $c cm: warning, prepare to leave'),
           row(AppColors.crit, '$c cm and above: critical, evacuate now'),
+          if (onEdit != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.tune, size: 18),
+                label: const Text('Edit levels'),
+              ),
+            ),
+          ],
         ],
       ),
     );

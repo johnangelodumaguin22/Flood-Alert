@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme.dart';
 
@@ -11,6 +12,7 @@ class LabeledField extends StatelessWidget {
     this.optionalNote,
     this.validator,
     this.keyboard,
+    this.formatters,
     this.autofill,
     this.obscure = false,
     this.suffix,
@@ -22,6 +24,7 @@ class LabeledField extends StatelessWidget {
   final TextEditingController controller;
   final FormFieldValidator<String>? validator;
   final TextInputType? keyboard;
+  final List<TextInputFormatter>? formatters;
   final Iterable<String>? autofill;
   final bool obscure;
   final Widget? suffix;
@@ -52,6 +55,7 @@ class LabeledField extends StatelessWidget {
             controller: controller,
             validator: validator,
             keyboardType: keyboard,
+            inputFormatters: formatters,
             autofillHints: autofill,
             obscureText: obscure,
             onFieldSubmitted: onSubmitted,

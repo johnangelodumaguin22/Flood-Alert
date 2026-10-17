@@ -151,6 +151,28 @@ class Api {
 
   Future<void> logout() => _auth.signOut();
 
+  /// Admins are listed at `admins/<uid> = true`, set in the Firebase console.
+  Future<bool> isAdmin() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return false;
+    try {
+      final snap = await _guard(() => _ref('admins/$uid').get());
+      return snap.value == true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  /// The station re-reads these every minute, so LEDs and buzzer follow without a reflash.
+  Future<void> saveLevels({required double warnCm, required double critCm}) => _guard(
+    () => _ref('stations/$stationId/info').update({
+      'warn_cm': warnCm,
+      'crit_cm': critCm,
+      'updated_by': _auth.currentUser!.uid,
+      'updated_at': ServerValue.timestamp,
+    }),
+  );
+
   /// Live dashboard: re-emits on every database change and every 5 s so "seconds ago" and offline state stay current.
   Stream<DashboardData> dashboard() {
     final station = _ref('stations/$stationId');

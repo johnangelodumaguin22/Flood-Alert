@@ -21,21 +21,25 @@ An IoT flood monitor. An ESP32 station measures river water level with an HC-SR0
 | Warning | 65–84.9 cm | yellow | off |
 | Critical | 85 cm and above | red | beeping |
 
-Thresholds live at `stations/station1/info` (`warn_cm`, `crit_cm`). Edit them in the Firebase console. The station reads them every minute, so no reflash is needed.
+Thresholds live at `stations/station1/info` (`warn_cm`, `crit_cm`). Admins can change them in the app: **What the levels mean → Edit levels**. The station reads them every minute, so no reflash is needed.
+
+To make someone an admin, open the Realtime Database Data tab and add `admins/<their User UID>` = `true` (boolean). The UID is under Authentication → Users. They see the **Edit levels** button the next time they open the dashboard. The rules require warning ≥ 1 cm, warning < critical, and critical ≤ `max_cm`.
 
 ## Database layout (Realtime Database)
 
 ```
 stations/station1/
-  info        {name, warn_cm, crit_cm, max_cm}            edited in the console only
+  info        {name, warn_cm, crit_cm, max_cm,             warn_cm/crit_cm editable by admins in the app,
+               updated_by, updated_at}                       the rest in the console only
   device_uid  "<uid of the station's Auth account>"         edited in the console only
   latest      {level_cm, distance_cm, status, buzzer_on, ts} written by the ESP32 every 5 s
   history/<id> {level_cm, ts}                                appended by the ESP32 every 60 s
 users/<uid>   {full_name, username, email, phone, created_at}
 usernames/<lowercase username> "<email>"                     lets people sign in with a username
+admins/<uid>  true                                           edited in the console only
 ```
 
-Rules: signed-in users can read stations. Only the station's own account can write readings. Nobody can edit `info` or `device_uid` from a client. Each user can read and write only their own profile. Usernames are first come, first served.
+Rules: signed-in users can read stations. Only the station's own account can write readings. Only admins can change `warn_cm` and `crit_cm`. Nobody can edit the rest of `info`, `device_uid` or `admins` from a client. Each user can read and write only their own profile. Usernames are first come, first served.
 
 ## 1. Firebase setup
 
