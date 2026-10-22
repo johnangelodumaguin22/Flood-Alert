@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'firebase_options.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/login_screen.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -23,7 +22,7 @@ class FloodAlertApp extends StatelessWidget {
       title: 'Flood Alert System',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      home: Api.instance.signedIn ? const DashboardScreen() : const LoginScreen(),
+      home: const DashboardScreen(),
     );
   }
 }

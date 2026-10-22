@@ -2,38 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-class StaffGauge extends StatelessWidget {
-  const StaffGauge({
-    super.key,
-    required this.level,
-    required this.max,
-    required this.warn,
-    required this.crit,
-    required this.fill,
-  });
-
-  final double level, max, warn, crit;
-  final Color fill;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: SizedBox(
-        width: 76,
-        height: 260,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(end: (level / max).clamp(0.0, 1.0)),
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeOutCubic,
-          builder: (_, frac, _) => CustomPaint(
-            painter: _GaugePainter(frac: frac, max: max, warn: warn, crit: crit, fill: fill),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 void _dashedLine(Canvas canvas, Offset a, Offset b, Paint p) {
   const dash = 4.0;
   final len = (b - a).distance;
@@ -41,68 +9,6 @@ void _dashedLine(Canvas canvas, Offset a, Offset b, Paint p) {
   for (var d = 0.0; d < len; d += dash * 2) {
     canvas.drawLine(a + dir * d, a + dir * (d + dash).clamp(0, len), p);
   }
-}
-
-class _GaugePainter extends CustomPainter {
-  _GaugePainter({required this.frac, required this.max, required this.warn, required this.crit, required this.fill});
-  final double frac, max, warn, crit;
-  final Color fill;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const scaleW = 28.0;
-    final tube = Rect.fromLTWH(scaleW + 4, 0, size.width - scaleW - 4, size.height);
-    final rr = RRect.fromRectAndRadius(tube, const Radius.circular(8));
-    double yFor(double v) => tube.bottom - (v / max).clamp(0.0, 1.0) * tube.height;
-
-    for (var v = 0; v <= max; v += 20) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: '$v',
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(
-        canvas,
-        Offset(scaleW - tp.width, (yFor(v.toDouble()) - tp.height / 2).clamp(0, size.height - tp.height)),
-      );
-    }
-
-    canvas.save();
-    canvas.clipRRect(rr);
-    canvas.drawRect(tube, Paint()..color = AppColors.silt);
-    final tick = Paint()..color = AppColors.line;
-    for (var i = 1; i < 10; i++) {
-      final y = tube.bottom - tube.height * i / 10;
-      canvas.drawLine(Offset(tube.left, y), Offset(tube.right, y), tick);
-    }
-    canvas.drawRect(
-      Rect.fromLTRB(tube.left, tube.bottom - tube.height * frac, tube.right, tube.bottom),
-      Paint()..color = fill,
-    );
-    final dashW = Paint()
-      ..color = AppColors.warnFill
-      ..strokeWidth = 2;
-    final dashC = Paint()
-      ..color = AppColors.crit
-      ..strokeWidth = 2;
-    _dashedLine(canvas, Offset(tube.left, yFor(warn)), Offset(tube.right, yFor(warn)), dashW);
-    _dashedLine(canvas, Offset(tube.left, yFor(crit)), Offset(tube.right, yFor(crit)), dashC);
-    canvas.restore();
-
-    canvas.drawRRect(
-      rr,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = AppColors.line,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_GaugePainter old) =>
-      old.frac != frac || old.fill != fill || old.warn != warn || old.crit != crit || old.max != max;
 }
 
 class SparklinePainter extends CustomPainter {
@@ -143,4 +49,76 @@ class SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(SparklinePainter old) => old.points != points || old.color != color;
+}
+
+/// Water level over a time window (whole hours around the data): gaps over 5 minutes break the line.
+class DayChartPainter extends CustomPainter {
+  DayChartPainter({
+    required this.start,
+    required this.end,
+    required this.points,
+    required this.max,
+    required this.warn,
+    required this.crit,
+  });
+  final DateTime start, end;
+  final List<({DateTime time, double level})> points; // oldest first
+  final double max, warn, crit;
+
+  static const _labelH = 16.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final h = size.height - _labelH;
+    final span = end.difference(start).inSeconds;
+    double x(DateTime t) => size.width * (t.difference(start).inSeconds / span).clamp(0.0, 1.0);
+    double y(double v) => h - (v / max).clamp(0.0, 1.0) * h;
+
+    final grid = Paint()..color = AppColors.border;
+    for (var i = 0; i <= 4; i++) {
+      final gx = size.width * i / 4;
+      final t = start.add(Duration(seconds: span * i ~/ 4));
+      final hr = t.hour % 12 == 0 ? 12 : t.hour % 12;
+      canvas.drawLine(Offset(gx, 0), Offset(gx, h), grid);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: '$hr${t.minute == 0 ? '' : ':${t.minute.toString().padLeft(2, '0')}'} ${t.hour < 12 ? 'AM' : 'PM'}',
+          style: const TextStyle(fontSize: 10, color: AppColors.slate),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset((gx - tp.width / 2).clamp(0, size.width - tp.width), h + 4));
+    }
+    canvas.drawLine(Offset(0, h), Offset(size.width, h), grid);
+    _dashedLine(canvas, Offset(0, y(warn)), Offset(size.width, y(warn)), Paint()..color = AppColors.warnFill);
+    _dashedLine(canvas, Offset(0, y(crit)), Offset(size.width, y(crit)), Paint()..color = AppColors.crit);
+
+    final line = Paint()
+      ..color = AppColors.blue
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path();
+    DateTime? prev;
+    for (final p in points) {
+      final o = Offset(x(p.time), y(p.level));
+      if (prev == null || p.time.difference(prev).inMinutes > 5) {
+        path.moveTo(o.dx, o.dy);
+        canvas.drawCircle(o, 1.5, Paint()..color = AppColors.blue);
+      } else {
+        path.lineTo(o.dx, o.dy);
+      }
+      prev = p.time;
+    }
+    canvas.drawPath(path, line);
+  }
+
+  @override
+  bool shouldRepaint(DayChartPainter old) =>
+      old.points != points ||
+      old.start != start ||
+      old.end != end ||
+      old.warn != warn ||
+      old.crit != crit ||
+      old.max != max;
 }

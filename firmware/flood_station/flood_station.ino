@@ -135,7 +135,8 @@ void publish(float levelCm, float distanceCm, bool withHistory) {
   if (code == 401) { idToken = ""; return; }
 
   if (withHistory) {
-    snprintf(body, sizeof body, "{\"level_cm\":%.1f,\"ts\":{\".sv\":\"timestamp\"}}", levelCm);
+    snprintf(body, sizeof body, "{\"level_cm\":%.1f,\"status\":\"%s\",\"ts\":{\".sv\":\"timestamp\"}}", levelCm,
+             LEVEL_NAMES[level]);
     request("POST", dbUrl("/history"), body, nullptr, "history");
 
     // Thresholds can be changed in the Firebase console without reflashing.

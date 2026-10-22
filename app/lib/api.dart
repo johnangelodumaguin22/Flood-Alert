@@ -2,16 +2,14 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 const stationId = 'station1';
 const offlineAfter = Duration(seconds: 60);
 const _badLogin = "That email or password doesn't match an account. Check them and try again.";
 
 class ApiException implements Exception {
-  ApiException(this.message, [this.fields = const {}]);
+  ApiException(this.message);
   final String message;
-  final Map<String, String> fields;
   @override
   String toString() => message;
 }
@@ -42,6 +40,13 @@ class HistoryPoint {
   final double levelCm;
 }
 
+class HistoryRecord {
+  HistoryRecord(this.time, this.levelCm, this.status);
+  final DateTime time;
+  final double levelCm;
+  final String? status; // null for records saved before the station sent a status
+}
+
 class DashboardData {
   DashboardData(this._info, this.latest, this.history);
   final StationInfo _info;
@@ -60,7 +65,6 @@ String _authMessage(FirebaseAuthException e) => switch (e.code) {
   'invalid-credential' || 'wrong-password' || 'user-not-found' || 'invalid-email' => _badLogin,
   'too-many-requests' => 'Too many attempts. Wait a few minutes and try again.',
   'network-request-failed' => "Can't reach the server. Check your internet connection.",
-  'weak-password' => 'Use at least 8 characters with a number.',
   'user-disabled' => 'This account has been disabled.',
   _ => e.message ?? 'Something went wrong.',
 };
@@ -84,15 +88,11 @@ class Api {
   FirebaseAuth get _auth => FirebaseAuth.instance;
   DatabaseReference _ref(String path) => FirebaseDatabase.instance.ref(path);
 
-  bool get signedIn => _auth.currentUser != null;
+  /// Waits for Firebase to restore a saved admin session, if any.
+  Future<void> restoreSession() => _auth.authStateChanges().first;
 
-  Future<void> restoreSession() async {
-    await _auth.authStateChanges().first;
-    final prefs = await SharedPreferences.getInstance();
-    if (signedIn && prefs.getBool('remember') == false) await _auth.signOut();
-  }
-
-  Future<void> login(String login, String password, {required bool remember}) async {
+  /// Signs in with an email or username; only accounts listed in admins/ are kept signed in.
+  Future<void> adminSignIn(String login, String password) async {
     var email = login.trim().toLowerCase();
     if (!email.contains('@')) {
       final snap = await _guard(() => _ref('usernames/$email').get());
@@ -104,49 +104,10 @@ class Api {
     } on FirebaseAuthException catch (e) {
       throw ApiException(_authMessage(e));
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('remember', remember);
-  }
-
-  Future<String> register(Map<String, String> f) async {
-    final username = f['username']!;
-    final key = username.toLowerCase();
-    final email = f['email']!.toLowerCase();
-
-    final taken = await _guard(() => _ref('usernames/$key').get());
-    if (taken.exists) throw ApiException('Check the highlighted fields.', {'username': 'That username is taken.'});
-
-    final UserCredential cred;
-    try {
-      cred = await _auth.createUserWithEmailAndPassword(email: email, password: f['password']!);
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'email-already-in-use') {
-        throw ApiException('Check the highlighted fields.', {'email': 'An account with this email already exists.'});
-      }
-      if (e.code == 'invalid-email') {
-        throw ApiException('Check the highlighted fields.', {'email': 'Enter a valid email, like name@email.com.'});
-      }
-      throw ApiException(_authMessage(e));
+    if (!await isAdmin()) {
+      await _auth.signOut();
+      throw ApiException("This account isn't a barangay admin. Ask the system administrator for admin access.");
     }
-
-    try {
-      await _guard(() => _ref('usernames/$key').set(email));
-      await _guard(
-        () => _ref('users/${cred.user!.uid}').set({
-          'full_name': f['full_name'],
-          'username': username,
-          'email': email,
-          'phone': (f['phone'] ?? '').isEmpty ? null : f['phone'],
-          'created_at': ServerValue.timestamp,
-        }),
-      );
-    } catch (_) {
-      // Someone claimed the username between the check and the write: undo the auth account.
-      await cred.user!.delete();
-      throw ApiException('Check the highlighted fields.', {'username': 'That username was just taken. Try another.'});
-    }
-    await _auth.signOut();
-    return 'Account created. Sign in to continue.';
   }
 
   Future<void> logout() => _auth.signOut();
@@ -172,6 +133,29 @@ class Api {
       'updated_at': ServerValue.timestamp,
     }),
   );
+
+  /// Every history record from local midnight to midnight of [day], oldest first.
+  Future<List<HistoryRecord>> historyForDay(DateTime day) async {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = DateTime(day.year, day.month, day.day + 1);
+    final snap = await _guard(
+      () =>
+          _ref('stations/$stationId/history')
+              .orderByChild('ts')
+              .startAt(start.millisecondsSinceEpoch)
+              .endBefore(end.millisecondsSinceEpoch)
+              .get(),
+    );
+    return [
+      for (final c in snap.children)
+        if (c.child('ts').value is num && c.child('level_cm').value is num)
+          HistoryRecord(
+            DateTime.fromMillisecondsSinceEpoch((c.child('ts').value as num).toInt()),
+            (c.child('level_cm').value as num).toDouble(),
+            c.child('status').value as String?,
+          ),
+    ]..sort((a, b) => a.time.compareTo(b.time));
+  }
 
   /// Live dashboard: re-emits on every database change and every 5 s so "seconds ago" and offline state stay current.
   Stream<DashboardData> dashboard() {

@@ -16,17 +16,35 @@ class AppColors {
   static const critBg = Color(0xFFFBE4E2);
   static const off = Color(0xFF7A8588);
   static const offBg = Color(0xFFECEEEE);
+
+  // Dashboard design palette. river/water above stay as they are: the logo uses them.
+  static const navy = Color(0xFF111A2C);
+  static const blue = Color(0xFF1D5FD6);
+  static const blueBg = Color(0xFFEAF1FD);
+  static const page = Color(0xFFF6F8FB);
+  static const border = Color(0xFFE2E8F0);
+  static const slate = Color(0xFF64748B);
+  static const text = Color(0xFF0F172A);
+  static const okText = Color(0xFF15803D);
+  static const okBg = Color(0xFFE7F7EC);
+  static const okEdge = Color(0xFF9ED9B1);
+  static const amberText = Color(0xFFD97706);
+  static const amberBg = Color(0xFFFEF3C7);
+  static const amberEdge = Color(0xFFF6D57A);
+  static const red = Color(0xFFDC2626);
+  static const redBg = Color(0xFFFDE2E2);
+  static const redEdge = Color(0xFFF4A5A5);
 }
 
 ThemeData buildTheme() {
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(seedColor: AppColors.river, primary: AppColors.river, error: AppColors.crit),
-    scaffoldBackgroundColor: AppColors.silt,
+    scaffoldBackgroundColor: AppColors.page,
   );
   final border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(10),
-    borderSide: const BorderSide(color: AppColors.line, width: 1.5),
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppColors.border, width: 1.5),
   );
   return base.copyWith(
     inputDecorationTheme: InputDecorationTheme(
@@ -35,19 +53,19 @@ ThemeData buildTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: border,
       enabledBorder: border,
-      focusedBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.water, width: 1.5)),
+      focusedBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.blue, width: 1.5)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.river,
-        minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        backgroundColor: AppColors.blue,
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.3),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.water,
+        foregroundColor: AppColors.blue,
         textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
     ),
